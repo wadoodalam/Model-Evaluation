@@ -1,4 +1,9 @@
-# TODO: Evaluate four classifiers: DecisionTree, RandomForest, KNeighbors, and MLP
+'''
+Author: Wadood Alam
+Date: 
+Class: AI 539
+Assignment: Homework2 - Model Evaluation
+''' 
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, KFold, cross_val_score,StratifiedKFold,GroupKFold,StratifiedGroupKFold 
@@ -8,9 +13,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
 
-def LoadData():
+def LoadData(path):
     # read from csv(ignore persons col)
-    data = pd.read_csv('activity-dev.csv', usecols=['activity','G_front','G_vert','G_lat','ant_id','RSSI','phase','freq','person'])
+    data = pd.read_csv(path, usecols=['activity','G_front','G_vert','G_lat','ant_id','RSSI','phase','freq','person'])
     # X-col
     X = data[['G_front','G_vert','G_lat','ant_id','RSSI','phase','freq']]
     #Y-cols
@@ -36,7 +41,7 @@ def TrainTestSplitAccuracy(X,Y,classifier):
     accuracy = accuracy_score(Y_test,Y_predict)
     return accuracy
 
-def TenKFold(X,Y,classifier):
+def TenKFoldAccuracy(X,Y,classifier):
     # init KFold with 10 splits
     k_fold = KFold(n_splits=10,shuffle=True)
     # predict using classifier, with cross-validation as k-folds(10 folds), and find the scores
@@ -45,7 +50,7 @@ def TenKFold(X,Y,classifier):
     accuracy = scores.mean()
     return accuracy
 
-def SKFold(X,Y,classifier):
+def SKFoldAccuracy(X,Y,classifier):
     sk_fold = StratifiedKFold(n_splits=10,shuffle=True)
     scores = []
     for train,test in sk_fold.split(X,Y):
@@ -63,7 +68,7 @@ def SKFold(X,Y,classifier):
     accuracy = np.mean(scores)
     return accuracy
 
-def GKFold(X,Y,classifier,group):
+def GKFoldAccuracy(X,Y,classifier,group):
     gk_fold = GroupKFold(n_splits=10)
     scores = []
     for train,test in gk_fold.split(X,Y,group):
@@ -81,7 +86,7 @@ def GKFold(X,Y,classifier,group):
     accuracy = np.mean(scores)
     return accuracy
 
-def SGKFold(X,Y,classifier,group):
+def SGKFoldAccuracy(X,Y,classifier,group):
     sgk_fold = StratifiedGroupKFold(n_splits=10,shuffle=True)
     scores = []
     for train,test in sgk_fold.split(X,Y,group):
@@ -100,30 +105,61 @@ def SGKFold(X,Y,classifier,group):
     return accuracy    
 
 def ActivityDevAccuracy(X,Y,group):
-     # init classifiers
-    DT = DecisionTreeClassifier(random_state=42)
+    # init classifiers
+    DT = DecisionTreeClassifier(random_state=0)
     RF = RandomForestClassifier(random_state=0,min_samples_split=10,n_estimators=100)
     KNN = KNeighborsClassifier(n_neighbors=5) 
     MLP = MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=1000,random_state=0)
-    # list of classifiers to loop through
+    # Dict of classifiers 
     classifiers = {DT:[],RF:[],KNN:[],MLP:[]}
+    
     for classifier,acc in classifiers.items():
         # Call all the methodologies and append to the classifier dict 
         classifiers[classifier].append(TrainTestSplitAccuracy(X,Y,classifier))
-        classifiers[classifier].append(TenKFold(X,Y,classifier))
-        classifiers[classifier].append(SKFold(X,Y,classifier))
-        classifiers[classifier].append(GKFold(X,Y,classifier,group))
-        classifiers[classifier].append(SGKFold(X,Y,classifier,group))
+        classifiers[classifier].append(TenKFoldAccuracy(X,Y,classifier))
+        classifiers[classifier].append(SKFoldAccuracy(X,Y,classifier))
+        classifiers[classifier].append(GKFoldAccuracy(X,Y,classifier,group))
+        classifiers[classifier].append(SGKFoldAccuracy(X,Y,classifier,group))
     
-    col_names = ['A: Train 80%,test 20%(random)', 'B: 10-fold CV','C: Stratified 10-fold CV','D: Group-wise 10-fold CV','E: Stratified Group-wise 10-fold CV']  
-    # Convert the the results in dict to a csv file
-    DictToCSV(classifiers,col_names)
+    return classifiers
 
-if __name__ == "__main__":
+
+def TrainModel(X,Y,classifier):
+    classifier.fit(X,Y)
+    return classifier
+
+def Predict(X,Y,classifier):
+    Y_predict = classifier.predict(X)
+    accuracy = accuracy_score(Y,Y_predict)
+    return accuracy
+
+def ActivityHeldOutAccuracy(X,Y,X_held,Y_held):
+    # TODO: Baseline Algorithm
+    DT = TrainModel(X,Y,DecisionTreeClassifier(random_state=0))
+    RF = TrainModel(X,Y,RandomForestClassifier(random_state=0,min_samples_split=10,n_estimators=100))
+    KNN = TrainModel(X,Y,KNeighborsClassifier(n_neighbors=5)) 
+    MLP = TrainModel(X,Y,MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=1000,random_state=0))    
     
-    X,Y,group = LoadData()
-    ActivityDevAccuracy(X,Y,group)
-        
+    DT_accuracy = Predict(X_held,Y_held,DT)
+    RF_accuracy = Predict(X_held,Y_held,RF)
+    KNN_accuracy = Predict(X_held,Y_held,KNN)
+    MLP_accuracy = Predict(X_held,Y_held,MLP)
+    
+    print(DT_accuracy,RF_accuracy,KNN_accuracy,MLP_accuracy)
+    
+    
+    
+    
+if __name__ == "__main__":
+    col_names = ['A: Train 80%,test 20%(random)', 'B: 10-fold CV','C: Stratified 10-fold CV','D: Group-wise 10-fold CV','E: Stratified Group-wise 10-fold CV']  
+    X,Y,group = LoadData('activity-dev.csv')
+    X_held,Y_held,group_held = LoadData('activity-heldout.csv')
+    
+    #activity_dev_accuracy = ActivityDevAccuracy(X,Y,group)
+    ActivityHeldOutAccuracy(X,Y,X_held,Y_held)    
+    
+    # Convert the the results in dict to a csv file
+    #DictToCSV(activity_dev_accuracy,col_names)
 
 
     

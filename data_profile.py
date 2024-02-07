@@ -1,3 +1,9 @@
+'''
+Author: Wadood Alam
+Date: 
+Class: AI 539
+Assignment: Homework2 - Model Evaluation
+''' 
 import numpy as np
 import pandas as pd
 
