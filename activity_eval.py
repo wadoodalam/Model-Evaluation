@@ -14,12 +14,13 @@ def LoadData():
     # X-col
     X = data[['G_front','G_vert','G_lat','ant_id','RSSI','phase','freq']]
     #Y-cols
-    Y = data[['activity']]
+    Y = data['activity']
+  
     return X,Y
 
 def TrainTestSplitAccuracy(X,Y,classifier):
     # 80% of 3182 = ~2545
-    X_train,Y_train,X_test,Y_test = train_test_split(X,Y,train_size=0.8,random_state=0)
+    X_train,X_test,Y_train,Y_test = train_test_split(X,Y,train_size=0.8,random_state=0)
     # train classifier
     classifier.fit(X_train,Y_train)
     # predict Y label
@@ -43,19 +44,18 @@ if __name__ == "__main__":
     
     X,Y = LoadData()
     # init classifiers
-    DT = DecisionTreeClassifier(random_state=0)
+    DT = DecisionTreeClassifier(random_state=42)
     RF = RandomForestClassifier(random_state=0,min_samples_split=10,n_estimators=100)
     KNN = KNeighborsClassifier(n_neighbors=5) 
     MLP = MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=1000,random_state=0)
     # list of classifiers to loop through
-    accuracy = TrainTestSplitAccuracy(X,Y,DT)
-    '''   
-    classifiers = [DT]
-    for classifier in classifiers:
+    classifiers = {DT:[],RF:[],KNN:[],MLP:[]}
+    for classifier,acc in classifiers.items():
+        classifiers[classifier].append(TrainTestSplitAccuracy(X,Y,classifier))
+        classifiers[classifier].append(CrossValidation(X,Y,classifier))
         
-        accuracy = TrainTestSplitAccuracy(X,Y,classifier)
-    print(accuracy)
+    print(classifiers)
         
-    '''
+
 
     
