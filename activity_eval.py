@@ -53,8 +53,11 @@ if __name__ == "__main__":
     for classifier,acc in classifiers.items():
         classifiers[classifier].append(TrainTestSplitAccuracy(X,Y,classifier))
         classifiers[classifier].append(CrossValidation(X,Y,classifier))
-        
-    print(classifiers)
+    df = pd.DataFrame(classifiers)
+    df = df.T
+    df.columns=['A: Train 80%,test 20%(random)', 'B: 10-fold CV']  
+    df.to_csv('results.csv')
+   
         
 
 
