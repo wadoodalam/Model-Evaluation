@@ -13,6 +13,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.dummy import DummyClassifier
+from itertools import chain
 
 def LoadData(path):
     # read from csv(ignore persons col)
@@ -25,11 +26,6 @@ def LoadData(path):
     group = data['person']
     return X,Y,group
 
-def DictToCSV(data,col_names,path):
-    df = pd.DataFrame(data)
-    df = df.T
-    df.columns=col_names
-    df.to_csv(path,float_format='%.4f')
 
 def TrainTestSplitAccuracy(X,Y,classifier):
     # 80% of 3182 = ~2545
@@ -109,7 +105,7 @@ def ActivityDevAccuracy(X,Y,group):
     # init classifiers
     DT = DecisionTreeClassifier(random_state=0)
     RF = RandomForestClassifier(random_state=0,min_samples_split=10,n_estimators=100)
-    KNN = KNeighborsClassifier(n_neighbors=5) 
+    KNN = KNeighborsClassifier(n_neighbors=3) 
     MLP = MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=1000,random_state=0)
     # Dict of classifiers 
     classifiers = {DT:[],RF:[],KNN:[],MLP:[]}
@@ -157,9 +153,8 @@ def ActivityHeldOutAccuracy(X,Y,X_held,Y_held):
     
     return classifiers_accuracy
     
-def Error(dev,held):
-    return error    
-    
+
+   
     
 if __name__ == "__main__":
     col_names = ['A: Train 80%,test 20%(random)', 'B: 10-fold CV','C: Stratified 10-fold CV','D: Group-wise 10-fold CV','E: Stratified Group-wise 10-fold CV']  
@@ -167,9 +162,45 @@ if __name__ == "__main__":
     X_held,Y_held,group_held = LoadData('activity-heldout.csv')
     
     activity_dev_accuracy = ActivityDevAccuracy(X,Y,group)
-    activity_held_accuracy = ActivityHeldOutAccuracy(X,Y,X_held,Y_held)    
-    error = Error(activity_dev_accuracy,activity_held_accuracy)
+    activity_held_accuracy = ActivityHeldOutAccuracy(X,Y,X_held,Y_held)   
 
+
+
+
+    held_acc = []
+    for classifier, acc in activity_held_accuracy.items():
+        for accuracy in acc:
+            held_acc.append(accuracy)
+    held_acc = held_acc[:-1]
+
+ 
+    dev_acc = []
+    for classifier, acc in activity_dev_accuracy.items():
+        dev_acc.append(acc)
+    #print("Dev", dev_acc)
+    #print("Held", held_acc)
+    error = []
+    j = -1
+    for element in dev_acc:
+        j+=1
+        signed_error = []
+        for i in element:
+            signed_error.append(abs(i-held_acc[j]))
+        error.append(signed_error)
+    
+    
+            
+    # Create dict for csv output for error
+    keys = ['Decision Tree', 'Random Forest', '3-NN', 'MLP']
+    errors = {}
+    for i, j in enumerate(error):
+        key = keys[i]  
+        errors[key] = j
+
+    
+ 
+ 
+ 
     # Convert the the results in dict to a csv file
     if activity_dev_accuracy:
         df = pd.DataFrame(activity_dev_accuracy)
@@ -183,6 +214,12 @@ if __name__ == "__main__":
         df.columns=['Held-out Accuracy'] 
         df.to_csv('held_accuracy.csv')
         
-
+    if errors:
+        df = pd.DataFrame(errors)
+        df = df.T
+        averages = df.mean()
+        df.loc['Average'] = averages    
+        df.columns=col_names 
+        df.to_csv('errors.csv')
 
     

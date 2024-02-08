@@ -1,0 +1,6 @@
+,Held-out Accuracy
+DecisionTreeClassifier(random_state=0),0.7032523421433468
+"RandomForestClassifier(min_samples_split=10, random_state=0)",0.7738593952319294
+KNeighborsClassifier(),0.6578566532104502
+"MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=1000, random_state=0)",0.777058420290959
+"DummyClassifier(random_state=0, strategy='stratified')",0.45951709955061315
