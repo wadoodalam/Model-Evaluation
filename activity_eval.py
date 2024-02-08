@@ -12,6 +12,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn.dummy import DummyClassifier
 
 def LoadData(path):
     # read from csv(ignore persons col)
@@ -24,11 +25,11 @@ def LoadData(path):
     group = data['person']
     return X,Y,group
 
-def DictToCSV(data,col_names):
+def DictToCSV(data,col_names,path):
     df = pd.DataFrame(data)
     df = df.T
     df.columns=col_names
-    df.to_csv('dev_accuracy.csv',float_format='%.4f')
+    df.to_csv(path,float_format='%.4f')
 
 def TrainTestSplitAccuracy(X,Y,classifier):
     # 80% of 3182 = ~2545
@@ -125,29 +126,39 @@ def ActivityDevAccuracy(X,Y,group):
 
 
 def TrainModel(X,Y,classifier):
+    # train the model
     classifier.fit(X,Y)
     return classifier
 
 def Predict(X,Y,classifier):
+    #  predict from the model
     Y_predict = classifier.predict(X)
+    # find accuracy
     accuracy = accuracy_score(Y,Y_predict)
     return accuracy
 
 def ActivityHeldOutAccuracy(X,Y,X_held,Y_held):
     # TODO: Baseline Algorithm
+    # Train each model with dev dataset
     DT = TrainModel(X,Y,DecisionTreeClassifier(random_state=0))
     RF = TrainModel(X,Y,RandomForestClassifier(random_state=0,min_samples_split=10,n_estimators=100))
     KNN = TrainModel(X,Y,KNeighborsClassifier(n_neighbors=5)) 
-    MLP = TrainModel(X,Y,MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=1000,random_state=0))    
+    MLP = TrainModel(X,Y,MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=1000,random_state=0))   
+    Dummy = TrainModel(X,Y,DummyClassifier(strategy='stratified',random_state=0)) 
     
+    # Predict with each model and get accuracy in comparison to held-out dataset
     DT_accuracy = Predict(X_held,Y_held,DT)
     RF_accuracy = Predict(X_held,Y_held,RF)
     KNN_accuracy = Predict(X_held,Y_held,KNN)
     MLP_accuracy = Predict(X_held,Y_held,MLP)
+    Dummy_accuracy = Predict(X_held,Y_held,Dummy)
     
-    print(DT_accuracy,RF_accuracy,KNN_accuracy,MLP_accuracy)
+    classifiers_accuracy = {DT:[DT_accuracy],RF:[RF_accuracy],KNN:[KNN_accuracy],MLP:[MLP_accuracy],Dummy:[Dummy_accuracy]}
     
+    return classifiers_accuracy
     
+def Error(dev,held):
+    return error    
     
     
 if __name__ == "__main__":
@@ -155,11 +166,23 @@ if __name__ == "__main__":
     X,Y,group = LoadData('activity-dev.csv')
     X_held,Y_held,group_held = LoadData('activity-heldout.csv')
     
-    #activity_dev_accuracy = ActivityDevAccuracy(X,Y,group)
-    ActivityHeldOutAccuracy(X,Y,X_held,Y_held)    
-    
+    activity_dev_accuracy = ActivityDevAccuracy(X,Y,group)
+    activity_held_accuracy = ActivityHeldOutAccuracy(X,Y,X_held,Y_held)    
+    error = Error(activity_dev_accuracy,activity_held_accuracy)
+
     # Convert the the results in dict to a csv file
-    #DictToCSV(activity_dev_accuracy,col_names)
+    if activity_dev_accuracy:
+        df = pd.DataFrame(activity_dev_accuracy)
+        df = df.T
+        df.columns=col_names 
+        df.to_csv('dev_accuracy.csv')
+
+    if activity_held_accuracy:
+        df = pd.DataFrame(activity_held_accuracy)
+        df = df.T
+        df.columns=['Held-out Accuracy'] 
+        df.to_csv('held_accuracy.csv')
+        
 
 
     
