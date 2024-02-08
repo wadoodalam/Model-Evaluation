@@ -7,7 +7,7 @@ Assignment: Homework2 - Model Evaluation
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, KFold, cross_val_score,StratifiedKFold,GroupKFold,StratifiedGroupKFold 
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -126,12 +126,15 @@ def TrainModel(X,Y,classifier):
     classifier.fit(X,Y)
     return classifier
 
-def Predict(X,Y,classifier):
+def Predict(X,Y,classifier,MLP=False):
     #  predict from the model
     Y_predict = classifier.predict(X)
-    # find accuracy
     accuracy = accuracy_score(Y,Y_predict)
-    return accuracy
+    if MLP:
+        conf_matrix = confusion_matrix(Y, Y_predict)
+        return accuracy, conf_matrix
+    else:
+        return accuracy
 
 def ActivityHeldOutAccuracy(X,Y,X_held,Y_held):
     # TODO: Baseline Algorithm
@@ -146,12 +149,12 @@ def ActivityHeldOutAccuracy(X,Y,X_held,Y_held):
     DT_accuracy = Predict(X_held,Y_held,DT)
     RF_accuracy = Predict(X_held,Y_held,RF)
     KNN_accuracy = Predict(X_held,Y_held,KNN)
-    MLP_accuracy = Predict(X_held,Y_held,MLP)
+    MLP_accuracy,conf_matrix = Predict(X_held,Y_held,MLP,True)
     Dummy_accuracy = Predict(X_held,Y_held,Dummy)
     
     classifiers_accuracy = {DT:[DT_accuracy],RF:[RF_accuracy],KNN:[KNN_accuracy],MLP:[MLP_accuracy],Dummy:[Dummy_accuracy]}
     
-    return classifiers_accuracy
+    return classifiers_accuracy,conf_matrix
     
 
    
@@ -162,10 +165,8 @@ if __name__ == "__main__":
     X_held,Y_held,group_held = LoadData('activity-heldout.csv')
     
     activity_dev_accuracy = ActivityDevAccuracy(X,Y,group)
-    activity_held_accuracy = ActivityHeldOutAccuracy(X,Y,X_held,Y_held)   
-
-
-
+    activity_held_accuracy,conf_matrix = ActivityHeldOutAccuracy(X,Y,X_held,Y_held)   
+    print(conf_matrix)
 
     held_acc = []
     for classifier, acc in activity_held_accuracy.items():
@@ -177,8 +178,7 @@ if __name__ == "__main__":
     dev_acc = []
     for classifier, acc in activity_dev_accuracy.items():
         dev_acc.append(acc)
-    #print("Dev", dev_acc)
-    #print("Held", held_acc)
+
     error = []
     j = -1
     for element in dev_acc:
@@ -188,8 +188,6 @@ if __name__ == "__main__":
             signed_error.append(abs(i-held_acc[j]))
         error.append(signed_error)
     
-    
-            
     # Create dict for csv output for error
     keys = ['Decision Tree', 'Random Forest', '3-NN', 'MLP']
     errors = {}
