@@ -199,8 +199,6 @@ if __name__ == "__main__":
 
     
  
- 
- 
     # Convert the the results in dict to a csv file
     if activity_dev_accuracy:
         df = pd.DataFrame(activity_dev_accuracy)
