@@ -13,7 +13,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.dummy import DummyClassifier
-from itertools import chain
+
 
 def LoadData(path):
     # read from csv(ignore persons col)
@@ -25,7 +25,6 @@ def LoadData(path):
     #Group for group-wise cross validation
     group = data['person']
     return X,Y,group
-
 
 def TrainTestSplitAccuracy(X,Y,classifier):
     # 80% of 3182 = ~2545
@@ -109,6 +108,9 @@ def ActivityDevAccuracy(X,Y,group):
     MLP = MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=1000,random_state=0)
     # Dict of classifiers 
     classifiers = {DT:[],RF:[],KNN:[],MLP:[]}
+    for classifier,acc in classifiers.items():
+        print(classifier)
+        print(classifier.get_params())
     
     for classifier,acc in classifiers.items():
         # Call all the methodologies and append to the classifier dict 
@@ -152,6 +154,7 @@ def ActivityHeldOutAccuracy(X,Y,X_held,Y_held):
     MLP_accuracy,conf_matrix = Predict(X_held,Y_held,MLP,True)
     Dummy_accuracy = Predict(X_held,Y_held,Dummy)
     
+    # return a dict with classifiers and accuracies
     classifiers_accuracy = {DT:[DT_accuracy],RF:[RF_accuracy],KNN:[KNN_accuracy],MLP:[MLP_accuracy],Dummy:[Dummy_accuracy]}
     
     return classifiers_accuracy,conf_matrix
@@ -160,6 +163,7 @@ def ActivityHeldOutAccuracy(X,Y,X_held,Y_held):
    
     
 if __name__ == "__main__":
+    # col names for csv
     col_names = ['A: Train 80%,test 20%(random)', 'B: 10-fold CV','C: Stratified 10-fold CV','D: Group-wise 10-fold CV','E: Stratified Group-wise 10-fold CV']  
     X,Y,group = LoadData('activity-dev.csv')
     X_held,Y_held,group_held = LoadData('activity-heldout.csv')
@@ -168,25 +172,26 @@ if __name__ == "__main__":
     activity_held_accuracy,conf_matrix = ActivityHeldOutAccuracy(X,Y,X_held,Y_held)   
     print(conf_matrix)
 
+    # strip the accuracies from the dictionary of held-set accuracy
     held_acc = []
     for classifier, acc in activity_held_accuracy.items():
         for accuracy in acc:
             held_acc.append(accuracy)
     held_acc = held_acc[:-1]
 
- 
+ # strip the accuracies from the dictionary of dev-set accuracy
     dev_acc = []
     for classifier, acc in activity_dev_accuracy.items():
         dev_acc.append(acc)
 
+    # find use the above accuracies to calculate the error and append it to error list.
     error = []
-    j = -1
-    for element in dev_acc:
-        j+=1
+    for i in range(len(dev_acc)):
         signed_error = []
-        for i in element:
-            signed_error.append(abs(i-held_acc[j]))
+        for j in range(len(dev_acc[i])):
+            signed_error.append(dev_acc[i][j] - held_acc[i])
         error.append(signed_error)
+
     
     # Create dict for csv output for error
     keys = ['Decision Tree', 'Random Forest', '3-NN', 'MLP']

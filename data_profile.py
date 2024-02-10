@@ -11,6 +11,9 @@ def Describe(data):
     description = data.describe()
     description.to_csv('data_profile.csv')
     
+def DescribeCat(data):
+    description = data['activity'].astype('object').describe()
+    description.to_csv('activity_profile.csv')
 if __name__ == "__main__":
     data = pd.read_csv('activity-dev.csv')
-    Describe(data)
+    DescribeCat(data)
